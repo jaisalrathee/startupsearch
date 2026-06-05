@@ -241,6 +241,71 @@ body {
   }
 }
 
+@keyframes sheetRise {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet-rise {
+  animation: sheetRise 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-rise {
+    animation: none !important;
+  }
+}
+
+/* ─── mobile-only refinements ─── */
+@media (max-width: 640px) {
+  /* Tighter padding on insight surfaces */
+  .surface {
+    border-radius: 12px;
+  }
+
+  /* Reduce font in tables; horizontal scroll still active via overflow-x-auto */
+  table.radar {
+    font-size: 12px;
+  }
+  table.radar th,
+  table.radar td {
+    padding: 10px 12px;
+  }
+  table.radar th {
+    font-size: 10px;
+  }
+
+  /* Inputs are easier to tap at 36px */
+  .filter-input {
+    height: 36px;
+    font-size: 13px;
+  }
+
+  /* Keep the floating mobile filter button clear of footer */
+  footer {
+    padding-bottom: 64px;
+  }
+}
+
+/* iOS — disable double-tap zoom on buttons */
+button {
+  touch-action: manipulation;
+}
+
+/* Ensure form controls don't zoom focus on iOS (font-size >= 16px on focus) */
+@media (max-width: 640px) {
+  .filter-input,
+  .input,
+  input[type="date"],
+  select {
+    font-size: 16px;
+  }
+}
+
 .anim-rise {
   animation: rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -352,4 +417,23 @@ table.radar tr:last-child td {
 
 table.radar tr:hover td {
   background: #fafafb;
+}
+
+/* Sticky first column on mobile so the company name stays visible
+   as you scroll the table horizontally. */
+@media (max-width: 640px) {
+  table.radar th:first-child,
+  table.radar td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+    z-index: 1;
+    box-shadow: 1px 0 0 var(--line);
+  }
+  table.radar th:first-child {
+    background: #fbfbfc;
+  }
+  table.radar tr:hover td:first-child {
+    background: #fafafb;
+  }
 }

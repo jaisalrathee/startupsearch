@@ -33,6 +33,34 @@ export function Dashboard() {
   const [momentum, setMomentum] = useState<MomentumPoint[] | null>(null)
   const [zeitgeist, setZeitgeist] = useState<ZeitgeistPoint[] | null>(null)
   const [similarFor, setSimilarFor] = useState<Company | null>(null)
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+
+  // Count of active filters for the mobile toggle pill
+  const activeFilterCount = useMemo(() => {
+    let n = 0
+    n += filters.sic.length
+    n += filters.regions.length
+    n += filters.cities.length
+    if (filters.nameIncludes) n++
+    if (filters.nameExcludes) n++
+    if (filters.postcode) n++
+    if (filters.status !== "any") n++
+    if (filters.kind !== "any") n++
+    if (filters.range === "custom") n++
+    if (filters.excludeFormationAgents) n++
+    return n
+  }, [filters])
+
+  // Lock body scroll when the mobile filter sheet is open
+  useEffect(() => {
+    if (filterSheetOpen) {
+      const prev = document.body.style.overflow
+      document.body.style.overflow = "hidden"
+      return () => {
+        document.body.style.overflow = prev
+      }
+    }
+  }, [filterSheetOpen])
 
   const queryString = useMemo(() => filtersToQuery(filters), [filters])
 
@@ -97,17 +125,33 @@ export function Dashboard() {
   return (
     <main className="min-h-screen">
       <Header />
-      <div className="mx-auto w-full max-w-[1320px] px-5 pb-24 pt-8 sm:px-8">
+      <div className="mx-auto w-full max-w-[1320px] px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pt-8">
         <Hero source={data?.source} totalMatched={data?.pagination.totalMatched ?? 0} loading={loading} />
 
-        <div className="mt-7 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <FilterRail
-            filters={filters}
-            onChange={updateFilters}
-            onReset={resetFilters}
-            totalMatched={data?.pagination.totalMatched ?? 0}
-            loading={loading}
-          />
+        <div className="mt-6 grid gap-4 lg:mt-7 lg:gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+          {/* Desktop sidebar — hidden below lg */}
+          <div className="hidden lg:block">
+            <FilterRail
+              filters={filters}
+              onChange={updateFilters}
+              onReset={resetFilters}
+              totalMatched={data?.pagination.totalMatched ?? 0}
+              loading={loading}
+            />
+          </div>
+
+          {/* Mobile filter sheet — only mounts when open */}
+          {filterSheetOpen ? (
+            <MobileFilterSheet onClose={() => setFilterSheetOpen(false)}>
+              <FilterRail
+                filters={filters}
+                onChange={updateFilters}
+                onReset={resetFilters}
+                totalMatched={data?.pagination.totalMatched ?? 0}
+                loading={loading}
+              />
+            </MobileFilterSheet>
+          ) : null}
 
           <div className="flex flex-col gap-4">
             {error ? <ErrorPanel message={error} onRetry={load} /> : null}
@@ -190,7 +234,66 @@ export function Dashboard() {
 
         <Footer />
       </div>
+
+      {/* Floating mobile filter toggle — hidden on lg+ */}
+      <button
+        onClick={() => setFilterSheetOpen(true)}
+        className="fixed bottom-4 left-1/2 z-40 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-[var(--text)] px-4 py-3 text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(11,12,14,0.25)] transition active:scale-95 lg:hidden"
+        aria-label="Open filters"
+      >
+        <FilterIcon />
+        Filters
+        {activeFilterCount > 0 ? (
+          <span className="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--accent)] px-1.5 text-[11px] font-semibold text-white">
+            {activeFilterCount}
+          </span>
+        ) : null}
+      </button>
     </main>
+  )
+}
+
+function FilterIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 5h16M7 12h10M10 19h4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function MobileFilterSheet({
+  children,
+  onClose,
+}: {
+  children: React.ReactNode
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+      <div
+        onClick={onClose}
+        className="absolute inset-0 bg-[rgba(11,12,14,0.4)] anim-fade"
+        style={{ animationDuration: "200ms" }}
+        aria-label="Close filters"
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-2xl bg-[var(--bg)] shadow-[0_-12px_40px_rgba(11,12,14,0.18)] sheet-rise"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--line)] bg-[var(--bg)] px-4 py-3">
+          <span className="text-[14px] font-semibold">Filters</span>
+          <button onClick={onClose} className="btn">
+            Done
+          </button>
+        </div>
+        <div className="px-4 py-3">{children}</div>
+      </div>
+    </div>
   )
 }
 
@@ -301,12 +404,12 @@ function Hero({
   loading: boolean
 }) {
   return (
-    <section className="flex flex-col gap-5">
-      <div className="flex items-center gap-2 anim-rise" style={{ animationDelay: "0ms" }}>
+    <section className="flex flex-col gap-4 sm:gap-5">
+      <div className="flex flex-wrap items-center gap-2 anim-rise" style={{ animationDelay: "0ms" }}>
         <span className="chip">
           <span className="chip-dot live-pulse" />
           {source === "demo"
-            ? "Demo data · set COMPANIES_HOUSE_API_KEY for live"
+            ? "Demo · set COMPANIES_HOUSE_API_KEY for live"
             : "Live · Companies House"}
         </span>
         <span className="chip" style={{ background: "white" }}>
@@ -315,15 +418,18 @@ function Hero({
       </div>
       <div className="flex flex-col gap-2">
         <h1
-          className="text-[36px] font-semibold leading-[1.05] tracking-[-0.6px] sm:text-[44px] anim-rise"
-          style={{ animationDelay: "80ms" }}
+          className="font-semibold leading-[1.05] tracking-[-0.6px] anim-rise"
+          style={{
+            animationDelay: "80ms",
+            fontSize: "clamp(28px, 6.5vw, 44px)",
+          }}
         >
           See every UK company,
-          <br />
+          <br className="hidden sm:inline" />{" "}
           the moment it's born.
         </h1>
         <p
-          className="max-w-[640px] text-[14px] leading-[1.55] text-[var(--muted)] anim-rise"
+          className="max-w-[640px] text-[13px] leading-[1.5] text-[var(--muted)] sm:text-[14px] sm:leading-[1.55] anim-rise"
           style={{ animationDelay: "160ms" }}
         >
           Filter 5 million UK companies by sector, region, postcode, and dozens of other dimensions —

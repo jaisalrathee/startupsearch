@@ -80,7 +80,7 @@ export function FilterRail({
   }
 
   return (
-    <aside className="surface sticky top-[68px] h-fit p-4">
+    <aside className="surface h-fit p-4 lg:sticky lg:top-[68px]">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-[13px] font-semibold">Filters</span>

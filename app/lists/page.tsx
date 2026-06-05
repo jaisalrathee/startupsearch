@@ -35,16 +35,19 @@ export default function ListsPage() {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[1180px] px-5 pb-24 pt-12 sm:px-8">
-        <section className="mb-10 flex flex-col gap-3 anim-rise">
+      <div className="mx-auto w-full max-w-[1180px] px-4 pb-20 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+        <section className="mb-8 flex flex-col gap-3 anim-rise sm:mb-10">
           <span className="chip w-fit">
             <span className="chip-dot live-pulse" />
             Pre-made filter sets
           </span>
-          <h1 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.6px] sm:text-[44px]">
+          <h1
+            className="font-semibold leading-[1.05] tracking-[-0.6px]"
+            style={{ fontSize: "clamp(28px, 6.5vw, 44px)" }}
+          >
             Lists worth watching.
           </h1>
-          <p className="max-w-[600px] text-[14px] leading-[1.55] text-[var(--muted)]">
+          <p className="max-w-[600px] text-[13px] leading-[1.5] text-[var(--muted)] sm:text-[14px] sm:leading-[1.55]">
             Each list is a saved filter combination — click through to see today's matches in the
             full dashboard, with all the same filters, insights, and trust scores.
           </p>
