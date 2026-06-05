@@ -30,10 +30,12 @@
 
   "observability": {
     "enabled": true
-  },
+  }
 
-  "routes": [
-    { "pattern": "startupsearch.co.uk", "custom_domain": true },
-    { "pattern": "www.startupsearch.co.uk", "custom_domain": true }
-  ]
+  // Custom domains startupsearch.co.uk + www are already attached to
+  // this worker at the account level (see Workers dashboard → Settings
+  // → Domains & Routes). They persist independently of wrangler.jsonc
+  // and don't need to be re-declared here — keeping them out lets the
+  // CI deploy skip the zone-level workers/routes reconciliation step
+  // (which requires a permission this token doesn't have).
 }
