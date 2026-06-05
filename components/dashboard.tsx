@@ -863,8 +863,8 @@ function CompaniesTable({
 }) {
   const rows = useMemo(() => {
     return [...data.companies].sort((a, b) => {
-      const left = (a as Record<string, unknown>)[sortKey]
-      const right = (b as Record<string, unknown>)[sortKey]
+      const left = (a as unknown as Record<string, unknown>)[sortKey]
+      const right = (b as unknown as Record<string, unknown>)[sortKey]
       if (typeof left === "number" && typeof right === "number") {
         return sortDir === "asc" ? left - right : right - left
       }
