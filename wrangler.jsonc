@@ -30,5 +30,10 @@
 
   "observability": {
     "enabled": true
-  }
+  },
+
+  "routes": [
+    { "pattern": "startupsearch.co.uk", "custom_domain": true },
+    { "pattern": "www.startupsearch.co.uk", "custom_domain": true }
+  ]
 }
