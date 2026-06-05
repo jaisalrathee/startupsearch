@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { FilterRail } from "@/components/filter-rail"
+import { HeaderSearch } from "@/components/header-search"
 import { UKHeatmap } from "@/components/uk-heatmap"
 import { rankSimilar } from "@/lib/similarity"
 import type { MomentumPoint } from "@/lib/momentum"
@@ -356,20 +357,20 @@ function Header() {
         WebkitBackdropFilter: "saturate(180%) blur(14px)",
       }}
     >
-      <div className="mx-auto flex w-full max-w-[1320px] items-center justify-between px-5 py-3 sm:px-8">
-        <div className="flex items-center gap-2.5">
+      <div className="mx-auto flex w-full max-w-[1320px] items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
+        <div className="flex shrink-0 items-center gap-2.5">
           <Logo />
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[15px] font-semibold">Radar</span>
-            <span className="text-[12px] text-[var(--muted)]">/ UK company formations</span>
+          <div className="hidden items-baseline gap-1.5 sm:flex">
+            <span className="text-[15px] font-semibold">Startup Search</span>
+            <span className="hidden text-[12px] text-[var(--muted)] md:inline">/ UK company formations</span>
           </div>
+        </div>
+        <div className="flex-1">
+          <HeaderSearch />
         </div>
         <nav className="hidden items-center gap-1 sm:flex">
           <a className="btn" href="/lists">
             Lists
-          </a>
-          <a className="btn" href="#companies">
-            Companies
           </a>
           <a
             className="btn btn-primary"
@@ -1066,10 +1067,19 @@ function Row({ c, onSimilar }: { c: Company; onSimilar: (c: Company) => void }) 
   return (
     <tr>
       <td>
-        <div className="font-medium">{c.name}</div>
-        <div className="text-[11px] text-[var(--muted)]">{c.region}{c.postcode ? ` · ${c.postcode}` : ""}</div>
+        <Link
+          href={`/c/${c.number}`}
+          className="block hover:text-[var(--accent)]"
+        >
+          <div className="font-medium">{c.name}</div>
+          <div className="text-[11px] text-[var(--muted)]">{c.region}{c.postcode ? ` · ${c.postcode}` : ""}</div>
+        </Link>
       </td>
-      <td className="font-mono text-[11px] text-[var(--muted)]">{c.number}</td>
+      <td>
+        <Link href={`/c/${c.number}`} className="font-mono text-[11px] text-[var(--muted)] hover:text-[var(--text)]">
+          {c.number}
+        </Link>
+      </td>
       <td className="tabular-nums text-[11px] text-[var(--muted)]">{c.incorporatedOn || "—"}</td>
       <td>
         <StatusPill status={c.status} />
