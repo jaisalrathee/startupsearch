@@ -1226,8 +1226,8 @@ function EmptyRow() {
 
 function Footer() {
   return (
-    <footer className="mt-12 flex items-center justify-between border-t border-[var(--line)] pt-5 text-[12px] text-[var(--muted)]">
-      <p>Radar · built from Companies House public data.</p>
+    <footer className="mt-12 flex flex-col gap-1 border-t border-[var(--line)] pt-5 text-[12px] text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+      <p>Startup Search · built from Companies House public data.</p>
       <p>Inter / -0.3px</p>
     </footer>
   )

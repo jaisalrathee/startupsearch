@@ -109,7 +109,7 @@ export function HeaderSearch({ compact = false }: { compact?: boolean }) {
   )
 
   return (
-    <div ref={containerRef} className={"relative " + (compact ? "" : "flex-1 max-w-[320px]")}>
+    <div ref={containerRef} className={"relative " + (compact ? "" : "flex-1 sm:max-w-[320px]")}>
       {!open ? (
         <button
           onClick={() => {
@@ -122,10 +122,13 @@ export function HeaderSearch({ compact = false }: { compact?: boolean }) {
           }
           aria-label="Search"
         >
-          <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex min-w-0 items-center gap-1.5">
             <SearchIcon />
             {!compact ? (
-              <span className="text-[var(--muted)]">Search companies or directors</span>
+              <span className="truncate text-[var(--muted)]">
+                <span className="hidden sm:inline">Search companies or directors</span>
+                <span className="sm:hidden">Search…</span>
+              </span>
             ) : null}
           </span>
           {!compact ? <KbdHint /> : null}
@@ -138,9 +141,9 @@ export function HeaderSearch({ compact = false }: { compact?: boolean }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search by name or company number…"
-            className="filter-input pl-9"
-            style={{ height: 36, fontSize: 13 }}
+            placeholder="Name or company number…"
+            className="filter-input pl-9 sm:text-[13px]"
+            style={{ height: 36 }}
             aria-label="Search"
             aria-expanded={open}
             aria-controls="search-results"

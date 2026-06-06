@@ -16,18 +16,18 @@ export default function ListsPage() {
           backdropFilter: "saturate(180%) blur(14px)",
         }}
       >
-        <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between px-5 py-3 sm:px-8">
+        <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="relative grid size-8 place-items-center overflow-hidden rounded-lg border border-[var(--line-strong)] bg-white">
               <div className="absolute inset-0 dotgrid opacity-50" />
               <div className="relative size-3 rounded-full bg-[var(--accent)] shadow-[0_0_0_4px_rgba(91,108,255,0.18)]" />
             </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-[15px] font-semibold">Radar</span>
-              <span className="text-[12px] text-[var(--muted)]">/ curated lists</span>
+            <div className="hidden items-baseline gap-1.5 sm:flex">
+              <span className="text-[15px] font-semibold">Startup Search</span>
+              <span className="hidden text-[12px] text-[var(--muted)] md:inline">/ curated lists</span>
             </div>
           </Link>
-          <nav className="hidden items-center gap-1 sm:flex">
+          <nav className="flex items-center gap-1">
             <Link href="/" className="btn">
               Dashboard
             </Link>
