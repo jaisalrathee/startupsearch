@@ -122,6 +122,61 @@ interface CHResponse {
 }
 
 // ─── HTTP layer with retries + timeout ───────────────────────────────────────
+// Walks the date range one day at a time, accumulating items into the
+// requested page. Honours "newest first" (walk latest → earliest) and
+// "oldest first" (walk earliest → latest). Uses per-day count-then-slice
+// queries so we never bump into CH's start_index cap on the overall
+// advanced-search result set.
+async function fetchPageByDayWalk(
+  apiKey: string,
+  baseParams: URLSearchParams,
+  range: { start: string; end: string },
+  filters: Filters
+): Promise<CHResponse> {
+  const days = eachDate(range.start, range.end)
+  if (filters.sort === "newest") days.reverse()
+
+  const startTarget = (filters.page - 1) * filters.pageSize
+  const need = filters.pageSize
+  const accumulated: CHItem[] = []
+  let skipped = 0
+
+  for (const date of days) {
+    if (accumulated.length >= need) break
+
+    // 1) Count for this day with all base filters applied.
+    const countParams = new URLSearchParams(baseParams)
+    countParams.set("incorporated_from", date)
+    countParams.set("incorporated_to", date)
+    countParams.set("size", "1")
+    const countRes = await callCompaniesHouse(apiKey, countParams)
+    const dayCount = countRes?.hits ?? 0
+    if (dayCount === 0) continue
+
+    // 2) Skip whole days that lie before the requested page.
+    if (skipped + dayCount <= startTarget) {
+      skipped += dayCount
+      continue
+    }
+
+    // 3) Otherwise pull the slice we need from this day.
+    const localStart = Math.max(0, startTarget - skipped)
+    const want = Math.min(need - accumulated.length, dayCount - localStart)
+    const sliceParams = new URLSearchParams(baseParams)
+    sliceParams.set("incorporated_from", date)
+    sliceParams.set("incorporated_to", date)
+    sliceParams.set("size", String(Math.min(want, TABLE_QUERY_SIZE)))
+    sliceParams.set("start_index", String(localStart))
+    const sliceRes = await callCompaniesHouse(apiKey, sliceParams)
+    if (sliceRes?.items?.length) {
+      accumulated.push(...sliceRes.items)
+    }
+    skipped += dayCount
+  }
+
+  return { items: accumulated }
+}
+
 async function callCompaniesHouse(
   apiKey: string,
   params: URLSearchParams
@@ -398,29 +453,23 @@ export async function fetchRadar(input: Partial<Filters> = {}): Promise<RadarRes
     return r
   })()
 
-  // For "oldest" sort we need the total first to compute the reverse index.
-  // For all other sorts we can fan out in parallel.
   const sampleRes = await samplePromise
-  const totalForPaging = sampleRes?.hits ?? 0
 
+  // The advanced-search endpoint has no `sort_by`, and its default order
+  // within a date range puts records from the earliest day first. So
+  // "newest first" requires us to walk days from latest to earliest and
+  // accumulate enough rows for the requested page; "oldest first" does
+  // the same in reverse.
   const pageRes = await (async () => {
-    const p = new URLSearchParams(baseParams)
     const pageSize = filters.pageSize
-    let startIndex: number
-    if (filters.sort === "oldest") {
-      // CH returns newest first by default. To page oldest first, walk
-      // backward from the total. Page 1 = the last `pageSize` items, etc.
-      startIndex = Math.max(0, totalForPaging - filters.page * pageSize)
-    } else {
-      startIndex = (filters.page - 1) * pageSize
+    if (filters.sort === "newest" || filters.sort === "oldest") {
+      return fetchPageByDayWalk(apiKey, baseParams, range, filters)
     }
+    // name / trust: just grab one slice and we'll sort it client-side below.
+    const p = new URLSearchParams(baseParams)
     p.set("size", String(Math.min(pageSize, TABLE_QUERY_SIZE)))
-    p.set("start_index", String(startIndex))
-    const r = await callCompaniesHouse(apiKey, p)
-    if (filters.sort === "oldest" && r?.items) {
-      return { ...r, items: [...r.items].reverse() }
-    }
-    return r
+    p.set("start_index", String((filters.page - 1) * pageSize))
+    return callCompaniesHouse(apiKey, p)
   })()
 
   let sample = (sampleRes?.items ?? []).map(toCompany)
@@ -430,9 +479,7 @@ export async function fetchRadar(input: Partial<Filters> = {}): Promise<RadarRes
   // current page's rows. We can't get true server-side ordering for them
   // because the Companies House advanced-search endpoint has no sort_by.
   if (filters.sort === "name") {
-    pageCompanies = [...pageCompanies].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    )
+    pageCompanies = [...pageCompanies].sort((a, b) => a.name.localeCompare(b.name))
   } else if (filters.sort === "trust") {
     pageCompanies = [...pageCompanies].sort((a, b) => b.trustScore - a.trustScore)
   }
