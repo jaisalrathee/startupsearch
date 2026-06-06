@@ -398,20 +398,44 @@ export async function fetchRadar(input: Partial<Filters> = {}): Promise<RadarRes
     return r
   })()
 
-  const pagePromise = (async () => {
+  // For "oldest" sort we need the total first to compute the reverse index.
+  // For all other sorts we can fan out in parallel.
+  const sampleRes = await samplePromise
+  const totalForPaging = sampleRes?.hits ?? 0
+
+  const pageRes = await (async () => {
     const p = new URLSearchParams(baseParams)
     const pageSize = filters.pageSize
-    const startIndex = (filters.page - 1) * pageSize
+    let startIndex: number
+    if (filters.sort === "oldest") {
+      // CH returns newest first by default. To page oldest first, walk
+      // backward from the total. Page 1 = the last `pageSize` items, etc.
+      startIndex = Math.max(0, totalForPaging - filters.page * pageSize)
+    } else {
+      startIndex = (filters.page - 1) * pageSize
+    }
     p.set("size", String(Math.min(pageSize, TABLE_QUERY_SIZE)))
     p.set("start_index", String(startIndex))
     const r = await callCompaniesHouse(apiKey, p)
+    if (filters.sort === "oldest" && r?.items) {
+      return { ...r, items: [...r.items].reverse() }
+    }
     return r
   })()
 
-  const [sampleRes, pageRes] = await Promise.all([samplePromise, pagePromise])
+  let sample = (sampleRes?.items ?? []).map(toCompany)
+  let pageCompanies = (pageRes?.items ?? []).map(toCompany)
 
-  let sample = (sampleRes.items ?? []).map(toCompany)
-  let pageCompanies = (pageRes.items ?? []).map(toCompany)
+  // Client-side sort for "name" and "trust" — these only re-order the
+  // current page's rows. We can't get true server-side ordering for them
+  // because the Companies House advanced-search endpoint has no sort_by.
+  if (filters.sort === "name") {
+    pageCompanies = [...pageCompanies].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    )
+  } else if (filters.sort === "trust") {
+    pageCompanies = [...pageCompanies].sort((a, b) => b.trustScore - a.trustScore)
+  }
 
   // Apply region filter client-side (CH location is locality, not our region
   // bucket) plus optional formation-agent filter — both run against the data

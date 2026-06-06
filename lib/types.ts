@@ -2,6 +2,15 @@ export type RangeKey = "today" | "yesterday" | "last7" | "last30" | "custom"
 
 export type Status = "active" | "dissolved" | "liquidation" | "open" | "any"
 
+export type SortKey = "newest" | "oldest" | "name" | "trust"
+
+export const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "name", label: "Name A–Z" },
+  { value: "trust", label: "Trust (high → low)" },
+]
+
 export type CompanyKind =
   | "ltd"
   | "llp"
@@ -26,6 +35,7 @@ export interface Filters {
   page: number
   pageSize: number
   excludeFormationAgents: boolean
+  sort: SortKey
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -38,6 +48,7 @@ export const DEFAULT_FILTERS: Filters = {
   page: 1,
   pageSize: 25,
   excludeFormationAgents: false,
+  sort: "newest",
 }
 
 export interface Company {

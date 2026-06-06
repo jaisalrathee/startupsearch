@@ -11,14 +11,13 @@ import type { MomentumPoint } from "@/lib/momentum"
 import type { ZeitgeistPoint } from "@/lib/zeitgeist"
 import {
   DEFAULT_FILTERS,
+  SORT_OPTIONS,
   type Bucket,
   type Company,
   type Filters,
   type RadarResponse,
+  type SortKey,
 } from "@/lib/types"
-
-type SortKey = "name" | "incorporatedOn" | "city" | "trustScore"
-type SortDir = "asc" | "desc"
 
 export function Dashboard() {
   const router = useRouter()
@@ -29,8 +28,6 @@ export function Dashboard() {
   const [data, setData] = useState<RadarResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [sortKey, setSortKey] = useState<SortKey>("incorporatedOn")
-  const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [momentum, setMomentum] = useState<MomentumPoint[] | null>(null)
   const [zeitgeist, setZeitgeist] = useState<ZeitgeistPoint[] | null>(null)
   const [similarFor, setSimilarFor] = useState<Company | null>(null)
@@ -69,7 +66,10 @@ export function Dashboard() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/companies?${queryString}`)
+      const res = await fetch(`/api/companies?${queryString}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      })
       const payload = await res.json()
       if (!res.ok) throw new Error(payload.error ?? "Failed to load.")
       setData(payload)
@@ -208,15 +208,8 @@ export function Dashboard() {
 
                 <CompaniesTable
                   data={data}
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onSort={(k) => {
-                    if (k === sortKey) setSortDir(sortDir === "asc" ? "desc" : "asc")
-                    else {
-                      setSortKey(k)
-                      setSortDir("desc")
-                    }
-                  }}
+                  sort={filters.sort}
+                  onSortChange={(s) => updateFilters({ sort: s })}
                   setPage={setPage}
                   onSimilar={(c) => setSimilarFor(c)}
                 />
@@ -324,6 +317,7 @@ function parseFiltersFromURL(sp: URLSearchParams): Filters {
     page: num("page", 1),
     pageSize: num("pageSize", 25),
     excludeFormationAgents: get("clean") === "1",
+    sort: (get("sort") as SortKey) ?? "newest",
   }
 }
 
@@ -343,6 +337,7 @@ function filtersToQuery(f: Filters): string {
   if (f.page !== 1) params.set("page", String(f.page))
   if (f.pageSize !== 25) params.set("pageSize", String(f.pageSize))
   if (f.excludeFormationAgents) params.set("clean", "1")
+  if (f.sort !== "newest") params.set("sort", f.sort)
   return params.toString()
 }
 
@@ -955,30 +950,18 @@ function SimilarPanel({
 
 function CompaniesTable({
   data,
-  sortKey,
-  sortDir,
-  onSort,
+  sort,
+  onSortChange,
   setPage,
   onSimilar,
 }: {
   data: RadarResponse
-  sortKey: SortKey
-  sortDir: SortDir
-  onSort: (k: SortKey) => void
+  sort: SortKey
+  onSortChange: (s: SortKey) => void
   setPage: (p: number) => void
   onSimilar: (c: Company) => void
 }) {
-  const rows = useMemo(() => {
-    return [...data.companies].sort((a, b) => {
-      const left = (a as unknown as Record<string, unknown>)[sortKey]
-      const right = (b as unknown as Record<string, unknown>)[sortKey]
-      if (typeof left === "number" && typeof right === "number") {
-        return sortDir === "asc" ? left - right : right - left
-      }
-      const cmp = String(left ?? "").localeCompare(String(right ?? ""))
-      return sortDir === "asc" ? cmp : -cmp
-    })
-  }, [data.companies, sortKey, sortDir])
+  const rows = data.companies
 
   return (
     <section
@@ -994,6 +977,24 @@ function CompaniesTable({
             page {data.pagination.page} of {data.pagination.pageCount}
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <label className="text-[11px] uppercase tracking-[0.4px] text-[var(--muted)]">
+            Sort by
+          </label>
+          <select
+            value={sort}
+            onChange={(e) => onSortChange(e.target.value as SortKey)}
+            className="filter-input"
+            style={{ width: "auto", maxWidth: 200 }}
+            aria-label="Sort by"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {rows.length === 0 ? (
@@ -1003,29 +1004,13 @@ function CompaniesTable({
           <table className="radar">
             <thead>
               <tr>
-                <SortableTh active={sortKey === "name"} dir={sortDir} onClick={() => onSort("name")}>
-                  Company
-                </SortableTh>
+                <th>Company</th>
                 <th>Number</th>
-                <SortableTh
-                  active={sortKey === "incorporatedOn"}
-                  dir={sortDir}
-                  onClick={() => onSort("incorporatedOn")}
-                >
-                  Incorporated
-                </SortableTh>
+                <th>Incorporated</th>
                 <th>Status</th>
-                <SortableTh active={sortKey === "city"} dir={sortDir} onClick={() => onSort("city")}>
-                  City
-                </SortableTh>
+                <th>City</th>
                 <th>SIC</th>
-                <SortableTh
-                  active={sortKey === "trustScore"}
-                  dir={sortDir}
-                  onClick={() => onSort("trustScore")}
-                >
-                  Trust
-                </SortableTh>
+                <th>Trust</th>
                 <th aria-label="actions" />
               </tr>
             </thead>
@@ -1150,32 +1135,6 @@ function StatusPill({ status }: { status: string }) {
       <span className="chip-dot" style={{ background: ok ? "#12b76a" : "#f04438" }} />
       {status}
     </span>
-  )
-}
-
-function SortableTh({
-  active,
-  dir,
-  onClick,
-  children,
-}: {
-  active: boolean
-  dir: SortDir
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <th>
-      <button
-        onClick={onClick}
-        className="inline-flex items-center gap-1.5 text-inherit hover:text-[var(--text)]"
-      >
-        {children}
-        <span aria-hidden className="text-[10px]">
-          {active ? (dir === "asc" ? "▲" : "▼") : "↕"}
-        </span>
-      </button>
-    </th>
   )
 }
 

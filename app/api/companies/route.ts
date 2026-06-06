@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server"
 import { fetchRadar } from "@/lib/companies-house"
+import { NO_CACHE_HEADERS } from "@/lib/no-cache"
 import {
   DEFAULT_FILTERS,
   type CompanyKind,
   type Filters,
   type RangeKey,
+  type SortKey,
   type Status,
 } from "@/lib/types"
 
@@ -19,6 +21,7 @@ const KINDS: CompanyKind[] = [
   "private-unlimited",
   "private-limited-shares-section-30-exemption",
 ]
+const SORTS: SortKey[] = ["newest", "oldest", "name", "trust"]
 
 export const dynamic = "force-dynamic"
 
@@ -50,6 +53,9 @@ export async function GET(request: Request) {
   const rawKind = sp.get("kind") as CompanyKind | null
   const kind: CompanyKind = rawKind && KINDS.includes(rawKind) ? rawKind : "any"
 
+  const rawSort = sp.get("sort") as SortKey | null
+  const sort: SortKey = rawSort && SORTS.includes(rawSort) ? rawSort : "newest"
+
   const filters: Filters = {
     ...DEFAULT_FILTERS,
     range,
@@ -66,13 +72,14 @@ export async function GET(request: Request) {
     page: parseInt32(sp.get("page"), 1, 1, 1000),
     pageSize: parseInt32(sp.get("pageSize"), 25, 5, 100),
     excludeFormationAgents: sp.get("clean") === "1",
+    sort,
   }
 
   try {
     const data = await fetchRadar(filters)
-    return NextResponse.json(data)
+    return NextResponse.json(data, { headers: NO_CACHE_HEADERS })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error"
-    return NextResponse.json({ error: message }, { status: 502 })
+    return NextResponse.json({ error: message }, { status: 502, headers: NO_CACHE_HEADERS })
   }
 }
